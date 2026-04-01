@@ -1,0 +1,21 @@
+{
+    "sqltools.connections": [
+        {
+            "connectionTimeout": 15,
+            "mssqlOptions": {
+                "appName": "SQLTools",
+                "useUTC": true,
+                "encrypt": true,
+                "trustServerCertificate": true
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "20.94.212.65",
+            "port": 1433,
+            "driver": "MSSQL",
+            "name": "SQL-SERVER-VM",
+            "username": "sqladmin",
+            "password": "P0c#3hb1z9JRdXVWs3cf"
+        }
+    ]
+}

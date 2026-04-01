@@ -1,0 +1,9 @@
+CategoryID,CategoryName,Description,IsActive
+1,Electronics,"Phones, laptops, tablets, and accessories",1
+2,Clothing,"Men, women, and children apparel",1
+3,Home & Kitchen,"Furniture, appliances, and kitchenware",1
+4,Sports & Outdoors,"Equipment, gear, and outdoor accessories",1
+5,Books,Physical and digital books across all genres,1
+6,Health & Beauty,"Personal care, cosmetics, and wellness products",1
+7,Toys & Games,"Children toys, board games, and puzzles",1
+8,Grocery,"Food, beverages, and household consumables",1

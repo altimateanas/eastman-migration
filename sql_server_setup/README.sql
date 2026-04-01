@@ -1,0 +1,51 @@
+-- ============================================================
+-- POC: MS SQL Server to Fabric Migration
+-- MASTER SCRIPT: Run all scripts in sequence
+-- Execute this single file to set up the entire environment
+-- ============================================================
+-- Run order:
+--   1. 01_create_database_and_schemas.sql  - Creates DB + RAW/TRANSFORMED schemas
+--   2. 02_create_raw_tables.sql            - Creates 10 RAW source tables
+--   3. 03_populate_raw_data.sql            - Populates RAW tables with sample data
+--   4. 04_create_transformed_tables.sql    - Creates dimension + fact tables
+--   5. 05_create_stored_procedures.sql     - Creates 8 stored procedures + orchestrator
+--   6. 06_execute_and_verify.sql           - Runs the load and verifies results
+-- ============================================================
+
+-- NOTE: Execute each script file above in order against your MS SQL Server.
+--       Each file begins with USE RetailDW (except 01 which creates it).
+--
+-- Expected Results After Full Execution:
+--
+-- RAW Schema (10 tables):
+--   Categories    -   8 rows
+--   Suppliers     -   6 rows
+--   Products      -  30 rows
+--   Stores        -   5 rows
+--   Employees     -  15 rows
+--   Customers     -  25 rows
+--   Orders        -  50 rows
+--   OrderItems    - 100 rows
+--   Payments      -  50 rows
+--   Shipments     -  45 rows
+--
+-- TRANSFORMED Schema (8 tables):
+--   DimDate             - 1,827 rows (5 years: 2022-2026)
+--   DimCustomer         -    25 rows
+--   DimProduct          -    30 rows
+--   DimStore            -     5 rows
+--   DimEmployee         -    15 rows
+--   DimPaymentMethod    -     5 rows
+--   FactSales           -   100 rows (1 per order line item)
+--   FactDailyInventory  -    30 rows (1 per active product)
+--
+-- Stored Procedures (9 total):
+--   TRANSFORMED.usp_LoadDimDate
+--   TRANSFORMED.usp_LoadDimCustomer
+--   TRANSFORMED.usp_LoadDimProduct
+--   TRANSFORMED.usp_LoadDimStore
+--   TRANSFORMED.usp_LoadDimEmployee
+--   TRANSFORMED.usp_LoadDimPaymentMethod
+--   TRANSFORMED.usp_LoadFactSales
+--   TRANSFORMED.usp_LoadFactDailyInventory
+--   TRANSFORMED.usp_LoadAllTransformed (orchestrator)

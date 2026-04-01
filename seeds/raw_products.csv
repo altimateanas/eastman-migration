@@ -1,0 +1,31 @@
+ProductID,ProductName,CategoryID,SupplierID,SKU,UnitPrice,CostPrice,UnitsInStock,ReorderLevel,IsDiscontinued
+1,Smartphone Pro X,1,1,ELEC-001,999.99,650.00,150,20,0
+2,Laptop UltraBook 15,1,1,ELEC-002,1299.99,850.00,80,10,0
+3,Wireless Earbuds Elite,1,1,ELEC-003,199.99,90.00,300,50,0
+4,Tablet Air 10,1,1,ELEC-004,499.99,280.00,120,15,0
+5,Men Cotton T-Shirt,2,2,CLTH-001,29.99,12.00,500,100,0
+6,Women Denim Jacket,2,2,CLTH-002,89.99,40.00,200,30,0
+7,Kids Winter Coat,2,2,CLTH-003,59.99,25.00,150,25,0
+8,Unisex Running Shoes,2,2,CLTH-004,119.99,55.00,250,40,0
+9,Stainless Steel Cookware Set,3,3,HOME-001,149.99,70.00,100,15,0
+10,Memory Foam Pillow,3,3,HOME-002,49.99,18.00,400,60,0
+11,Robot Vacuum Cleaner,3,3,HOME-003,349.99,180.00,60,10,0
+12,LED Desk Lamp,3,3,HOME-004,39.99,15.00,350,50,0
+13,Mountain Bike Pro,4,4,SPRT-001,799.99,420.00,40,5,0
+14,Yoga Mat Premium,4,4,SPRT-002,34.99,12.00,600,80,0
+15,Camping Tent 4-Person,4,4,SPRT-003,189.99,85.00,75,10,0
+16,Dumbbell Set 50lb,4,4,SPRT-004,129.99,60.00,100,15,0
+17,Data Engineering Handbook,5,5,BOOK-001,44.99,15.00,200,30,0
+18,Modern SQL Mastery,5,5,BOOK-002,39.99,13.00,180,25,0
+19,Cloud Architecture Guide,5,5,BOOK-003,54.99,20.00,150,20,0
+20,Python for Data Science,5,5,BOOK-004,49.99,17.00,220,35,0
+21,Organic Face Cream,6,6,HLTH-001,24.99,8.00,400,60,0
+22,Vitamin D Supplements,6,6,HLTH-002,19.99,6.00,500,80,0
+23,Electric Toothbrush,6,6,HLTH-003,79.99,35.00,200,30,0
+24,Hair Care Kit,6,6,HLTH-004,34.99,12.00,300,45,0
+25,Building Blocks Set 500pc,7,3,TOYS-001,44.99,15.00,250,40,0
+26,Strategy Board Game,7,3,TOYS-002,29.99,10.00,300,50,0
+27,Remote Control Car,7,3,TOYS-003,54.99,22.00,180,25,0
+28,Organic Coffee Beans 1lb,8,6,GROC-001,14.99,5.00,600,100,0
+29,Mixed Nuts Premium 2lb,8,6,GROC-002,19.99,7.00,400,70,0
+30,Green Tea Sampler Pack,8,6,GROC-003,12.99,4.00,500,80,0
