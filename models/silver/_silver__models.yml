@@ -1,0 +1,332 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: >
+      Cleansed and standardised customer master data from raw.seed_raw_customers.
+      One row per customer. Columns renamed to snake_case, strings trimmed,
+      email lowercased, dates cast to DATE.
+    columns:
+      - name: customer_id
+        description: Natural key — unique identifier for each customer (from source system).
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Customer's first name (trimmed).
+      - name: last_name
+        description: Customer's last name (trimmed).
+      - name: email
+        description: Customer's email address (lower-cased and trimmed).
+        tests:
+          - not_null
+      - name: phone
+        description: Customer's phone number (trimmed).
+      - name: date_of_birth
+        description: Customer's date of birth.
+      - name: gender
+        description: Customer's gender.
+      - name: address
+        description: Street address of the customer.
+      - name: city
+        description: City of residence.
+      - name: state
+        description: State of residence.
+      - name: country
+        description: Country of residence.
+      - name: postal_code
+        description: Postal/ZIP code (cast to VARCHAR).
+      - name: customer_segment
+        description: Customer segment classification from source system.
+      - name: registration_date
+        description: Date the customer registered.
+      - name: is_active
+        description: 1 = active customer, 0 = inactive.
+
+  - name: stg_orders
+    description: >
+      Cleansed order header data from raw.seed_raw_orders.
+      One row per order.
+    columns:
+      - name: order_id
+        description: Natural key — unique identifier for each order.
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Foreign key to stg_customers.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: store_id
+        description: Foreign key to stg_stores.
+      - name: employee_id
+        description: Foreign key to stg_employees.
+      - name: order_date
+        description: Date the order was placed.
+      - name: required_date
+        description: Date by which the order is required (from source system).
+      - name: order_status
+        description: Current status of the order.
+      - name: order_channel
+        description: Channel through which the order was placed (e.g. Online, In-Store).
+      - name: notes
+        description: Free-text notes attached to the order.
+
+  - name: stg_order_items
+    description: >
+      Cleansed order line item data from RAW.OrderItems.
+      One row per order line item.
+    columns:
+      - name: order_item_id
+        description: Natural key — unique identifier for each order line item.
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: Foreign key to stg_orders.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+      - name: product_id
+        description: Foreign key to stg_products.
+      - name: quantity
+        description: Number of units ordered.
+      - name: unit_price
+        description: Selling price per unit at time of order.
+      - name: discount_percent
+        description: Discount percentage applied to this line item.
+      - name: line_total
+        description: Total revenue for this line item after discount.
+
+  - name: stg_products
+    description: >
+      Cleansed product master data from RAW.Products.
+      One row per product.
+    columns:
+      - name: product_id
+        description: Natural key — unique identifier for each product.
+        tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Display name of the product.
+      - name: sku
+        description: Stock Keeping Unit identifier.
+      - name: category_id
+        description: Foreign key to stg_categories.
+      - name: supplier_id
+        description: Foreign key to stg_suppliers.
+      - name: unit_price
+        description: Current selling price per unit.
+      - name: cost_price
+        description: Cost of goods per unit.
+      - name: units_in_stock
+        description: Current stock quantity.
+      - name: reorder_level
+        description: Minimum stock level that triggers a reorder.
+      - name: is_discontinued
+        description: 1 = discontinued product, 0 = active.
+
+  - name: stg_categories
+    description: >
+      Cleansed product category lookup from raw.seed_raw_categories.
+      One row per category.
+    columns:
+      - name: category_id
+        description: Natural key — unique identifier for each category.
+        tests:
+          - unique
+          - not_null
+      - name: category_name
+        description: Name of the product category.
+        tests:
+          - not_null
+      - name: description
+        description: Descriptive text for the product category.
+      - name: is_active
+        description: 1 = active category, 0 = inactive.
+
+  - name: stg_suppliers
+    description: >
+      Cleansed supplier master data from raw.seed_raw_suppliers.
+      One row per supplier.
+    columns:
+      - name: supplier_id
+        description: Natural key — unique identifier for each supplier.
+        tests:
+          - unique
+          - not_null
+      - name: supplier_name
+        description: Name of the supplier company.
+        tests:
+          - not_null
+      - name: contact_name
+        description: Primary contact person at the supplier.
+      - name: contact_email
+        description: Email address of the primary contact (lower-cased).
+      - name: phone
+        description: Phone number for the supplier.
+      - name: address
+        description: Street address of the supplier.
+      - name: city
+        description: City where the supplier is located.
+      - name: state
+        description: State where the supplier is located.
+      - name: country
+        description: Country where the supplier is located.
+      - name: postal_code
+        description: Postal/ZIP code of the supplier (cast to VARCHAR).
+      - name: is_active
+        description: 1 = active supplier, 0 = inactive.
+
+  - name: stg_stores
+    description: >
+      Cleansed store master data from raw.seed_raw_stores.
+      One row per store.
+    columns:
+      - name: store_id
+        description: Natural key — unique identifier for each store.
+        tests:
+          - unique
+          - not_null
+      - name: store_name
+        description: Display name of the store.
+      - name: store_type
+        description: Type of store (e.g. Flagship, Outlet, Online).
+      - name: address
+        description: Street address of the store.
+      - name: city
+        description: City where the store is located.
+      - name: state
+        description: State where the store is located.
+      - name: country
+        description: Country where the store is located.
+      - name: postal_code
+        description: Postal/ZIP code of the store (cast to VARCHAR).
+      - name: phone
+        description: Phone number for the store.
+      - name: manager_name
+        description: Full name of the store manager.
+      - name: open_date
+        description: Date the store opened.
+      - name: is_active
+        description: 1 = active store, 0 = inactive.
+
+  - name: stg_employees
+    description: >
+      Cleansed employee master data from raw.seed_raw_employees.
+      One row per employee.
+    columns:
+      - name: employee_id
+        description: Natural key — unique identifier for each employee.
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Employee's first name.
+      - name: last_name
+        description: Employee's last name.
+      - name: email
+        description: Employee's email address (lower-cased).
+      - name: phone
+        description: Employee's phone number.
+      - name: hire_date
+        description: Date the employee was hired.
+      - name: job_title
+        description: Employee's job title.
+      - name: department
+        description: Department the employee belongs to.
+      - name: store_id
+        description: Foreign key to stg_stores — the store this employee works at.
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_stores')
+                field: store_id
+      - name: manager_id
+        description: Employee ID of this employee's direct manager (self-referencing).
+      - name: salary
+        description: Employee's annual salary (DECIMAL 18,2).
+      - name: is_active
+        description: 1 = active employee, 0 = inactive.
+
+  - name: stg_payments
+    description: >
+      Cleansed payment transaction data from raw.seed_raw_payments.
+      One row per payment transaction. Rows with NULL PaymentMethod are excluded.
+    columns:
+      - name: payment_id
+        description: Natural key — unique identifier for each payment transaction.
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: Foreign key to stg_orders.
+        tests:
+          - not_null
+      - name: payment_date
+        description: Date and time the payment was made.
+      - name: payment_method
+        description: Payment method used (e.g. CreditCard, Cash, DigitalWallet).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "CreditCard"
+                  - "DebitCard"
+                  - "Cash"
+                  - "DigitalWallet"
+                  - "BankTransfer"
+      - name: amount
+        description: Payment amount (DECIMAL 18,4).
+      - name: currency
+        description: ISO currency code for the payment (e.g. USD, EUR).
+      - name: payment_status
+        description: Status of the payment transaction (e.g. Completed, Pending, Failed).
+      - name: transaction_ref
+        description: External transaction reference identifier.
+
+  - name: stg_shipments
+    description: >
+      Cleansed shipment data from raw.seed_raw_shipments.
+      One row per shipment record.
+    columns:
+      - name: shipment_id
+        description: Natural key — unique identifier for each shipment.
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: Foreign key to stg_orders.
+        tests:
+          - not_null
+      - name: ship_date
+        description: Date and time the shipment was dispatched.
+      - name: delivery_date
+        description: Actual or estimated delivery date of the shipment.
+      - name: carrier
+        description: Shipping carrier used (e.g. FedEx, UPS, USPS).
+      - name: tracking_number
+        description: Carrier tracking number for the shipment.
+      - name: shipment_status
+        description: Current status of the shipment (e.g. Shipped, Delivered, Pending).
+      - name: shipping_cost
+        description: Cost of shipping for this shipment (DECIMAL 18,4).
+      - name: address
+        description: Delivery street address.
+      - name: city
+        description: Delivery city.
+      - name: state
+        description: Delivery state.
+      - name: country
+        description: Delivery country.
+      - name: postal_code
+        description: Delivery postal/ZIP code (cast to VARCHAR).

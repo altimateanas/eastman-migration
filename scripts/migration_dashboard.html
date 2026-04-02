@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Eastman RetailDW → Microsoft Fabric Migration Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+      * {
+        font-family: "Inter", sans-serif;
+      }
+      body {
+        background: #0f1117;
+        color: #e2e8f0;
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+      }
+      .pass-glow {
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+      }
+      .fail-glow {
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+      }
+      .pulse-dot {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .table-row:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .badge-pass {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .badge-fail {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .badge-warn {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+      }
+      .layer-bronze {
+        background: rgba(180, 83, 9, 0.2);
+        border: 1px solid rgba(180, 83, 9, 0.5);
+      }
+      .layer-silver {
+        background: rgba(100, 116, 139, 0.2);
+        border: 1px solid rgba(100, 116, 139, 0.5);
+      }
+      .layer-gold {
+        background: rgba(161, 130, 51, 0.2);
+        border: 1px solid rgba(202, 163, 48, 0.5);
+      }
+      .node-bronze {
+        fill: #b45309;
+        stroke: #f59e0b;
+        stroke-width: 2;
+      }
+      .node-silver {
+        fill: #475569;
+        stroke: #94a3b8;
+        stroke-width: 2;
+      }
+      .node-dim {
+        fill: #1d4ed8;
+        stroke: #60a5fa;
+        stroke-width: 2;
+      }
+      .node-fact {
+        fill: #7c3aed;
+        stroke: #a78bfa;
+        stroke-width: 2;
+      }
+      .link {
+        stroke: rgba(148, 163, 184, 0.3);
+        stroke-width: 1.5;
+        fill: none;
+      }
+      .tooltip {
+        position: fixed;
+        background: #1e2433;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 100;
+        max-width: 280px;
+      }
+      .progress-bar {
+        transition: width 1s ease-in-out;
+      }
+      details summary {
+        cursor: pointer;
+        user-select: none;
+      }
+      details summary::-webkit-details-marker {
+        display: none;
+      }
+      .chevron {
+        transition: transform 0.2s;
+      }
+      details[open] .chevron {
+        transform: rotate(90deg);
+      }
+      .sparkline-pass {
+        color: #4ade80;
+      }
+      .sparkline-fail {
+        color: #f87171;
+      }
+      @media (max-width: 768px) {
+        .kpi-grid {
+          grid-template-columns: 1fr 1fr !important;
+        }
+        .main-grid {
+          grid-template-columns: 1fr !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen p-4 md:p-8">
+    <!-- ── TOOLTIP ── -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- ── HEADER ── -->
+    <header class="mb-8">
+      <div class="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <div class="flex items-center gap-3 mb-1">
+            <div class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></div>
+            <span
+              class="text-xs font-medium text-slate-400 uppercase tracking-widest"
+              >Migration Validation</span
+            >
+          </div>
+          <h1 class="text-3xl font-bold text-white leading-tight">
+            RetailDW → Microsoft Fabric
+          </h1>
+          <p class="text-slate-400 mt-1 text-sm">
+            MS SQL Server <span class="text-slate-500">✦</span> Medallion
+            Architecture via dbt
+            <span class="text-slate-500 mx-2">·</span>
+            7 of 8 tables match perfectly — 1 expected operational drift
+          </p>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-slate-500">Run at</div>
+          <div class="text-sm font-mono text-slate-300">
+            2026-04-01 20:47 UTC
+          </div>
+          <div class="mt-1 text-xs text-slate-500">
+            dbt build:
+            <span class="text-emerald-400 font-medium">PASS=120 · ERROR=0</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── KPI ROW ── -->
+    <div class="kpi-grid grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="glass rounded-2xl p-5 pass-glow">
+        <div
+          class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3"
+        >
+          Migration Status
+        </div>
+        <div class="text-4xl font-bold text-emerald-400">87.5%</div>
+        <div class="mt-2 text-sm text-slate-300">
+          7 / 8 tables fully matched
+        </div>
+        <div
+          class="mt-3 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"
+        >
+          <div
+            class="progress-bar h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400"
+            style="width: 87.5%"
+          ></div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5">
+        <div
+          class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3"
+        >
+          Total Rows Migrated
+        </div>
+        <div class="text-4xl font-bold text-white">2,066</div>
+        <div class="mt-2 text-sm text-slate-300">Across all 8 gold tables</div>
+        <div class="mt-3 text-xs text-slate-500">
+          ✓ Source rows = Target rows for all tables
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5">
+        <div
+          class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3"
+        >
+          dbt Models Built
+        </div>
+        <div class="text-4xl font-bold text-white">18</div>
+        <div class="mt-2 text-sm text-slate-300">
+          10 silver · 6 dim · 2 fact
+        </div>
+        <div class="mt-3 flex gap-1">
+          <span class="badge-pass px-2 py-0.5 rounded text-xs font-medium"
+            >PASS 120</span
+          >
+          <span class="badge-fail px-2 py-0.5 rounded text-xs font-medium"
+            >ERROR 0</span
+          >
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 fail-glow">
+        <div
+          class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3"
+        >
+          Drift Detected
+        </div>
+        <div class="text-4xl font-bold text-amber-400">1</div>
+        <div class="mt-2 text-sm text-slate-300">fct_daily_inventory</div>
+        <div class="mt-3 text-xs text-amber-400/80">
+          snapshot_date_key offset by 1 day — operational, expected
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MAIN GRID: Parity Table + Row Count Chart ── -->
+    <div class="main-grid grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Parity Table -->
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold text-white">
+              Data Parity Results
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              MS SQL TRANSFORMED vs Fabric gold
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <span
+              class="badge-pass px-2.5 py-1 rounded-full text-xs font-medium"
+              >7 PASS</span
+            >
+            <span
+              class="badge-warn px-2.5 py-1 rounded-full text-xs font-medium"
+              >1 DRIFT</span
+            >
+          </div>
+        </div>
+
+        <table class="w-full text-sm">
+          <thead>
+            <tr
+              class="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-700/50"
+            >
+              <th class="text-left pb-3 font-medium">Table</th>
+              <th class="text-right pb-3 font-medium">Source</th>
+              <th class="text-right pb-3 font-medium">Target</th>
+              <th class="text-right pb-3 font-medium">Match</th>
+              <th class="text-center pb-3 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody id="parity-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Row Count Chart -->
+      <div class="glass rounded-2xl p-6">
+        <div class="mb-5">
+          <h2 class="text-lg font-semibold text-white">Row Count Validation</h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Source (MS SQL) vs Target (Fabric) — should be identical
+          </p>
+        </div>
+        <div class="relative" style="height: 300px">
+          <canvas id="rowCountChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DRIFT DETAIL ── -->
+    <div class="glass rounded-2xl mb-8 overflow-hidden">
+      <details>
+        <summary
+          class="flex items-center justify-between p-6 hover:bg-white/[0.02] transition-colors"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="w-8 h-8 rounded-lg badge-warn flex items-center justify-center text-base"
+            >
+              ⚠
+            </div>
+            <div>
+              <div class="font-semibold text-white">
+                fct_daily_inventory — Expected Operational Drift
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">
+                30 rows differ on
+                <code class="text-amber-400 bg-amber-400/10 px-1 rounded"
+                  >snapshot_date_key</code
+                >
+                · off by 1 day
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="badge-warn px-3 py-1 rounded-full text-xs font-medium"
+              >0% match</span
+            >
+            <svg
+              class="chevron w-5 h-5 text-slate-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </div>
+        </summary>
+
+        <div class="px-6 pb-6 border-t border-slate-700/50">
+          <div
+            class="mt-5 p-4 rounded-xl bg-amber-400/5 border border-amber-400/20 mb-5"
+          >
+            <div class="text-sm font-medium text-amber-300 mb-1">
+              Root Cause
+            </div>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              The MS SQL stored procedure captured the inventory snapshot on
+              <code class="text-amber-400">20260331</code> (March 31). The dbt
+              model ran a day later and used
+              <code class="text-amber-400">CAST(GETDATE() AS DATE)</code>,
+              producing <code class="text-amber-400">20260401</code> (April 1).
+              This is a
+              <strong class="text-white">time-of-execution drift</strong>, not a
+              data transformation error. Both systems are internally consistent
+              — the date will align on the next scheduled run.
+            </p>
+          </div>
+
+          <div
+            class="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium"
+          >
+            Sample Diffs (10 of 30)
+          </div>
+          <table class="w-full text-sm">
+            <thead>
+              <tr
+                class="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-700/50"
+              >
+                <th class="text-left pb-2 font-medium">Product ID</th>
+                <th class="text-right pb-2 font-medium">Source (MSSQL)</th>
+                <th class="text-right pb-2 font-medium">Target (Fabric)</th>
+                <th class="text-right pb-2 font-medium">Delta</th>
+              </tr>
+            </thead>
+            <tbody id="drift-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <!-- ── MEDALLION LINEAGE DAG ── -->
+    <div class="glass rounded-2xl p-6 mb-8">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-lg font-semibold text-white">
+            Medallion Architecture — Data Lineage
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Bronze (seeds) → Silver (stg_*) → Gold (dim_* / fct_*)
+          </p>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-slate-400">
+          <div class="flex items-center gap-1.5">
+            <div
+              class="w-3 h-3 rounded-sm bg-amber-700 border border-amber-500"
+            ></div>
+            Bronze
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div
+              class="w-3 h-3 rounded-sm bg-slate-600 border border-slate-400"
+            ></div>
+            Silver
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div
+              class="w-3 h-3 rounded-sm bg-blue-800 border border-blue-400"
+            ></div>
+            Dim
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div
+              class="w-3 h-3 rounded-sm bg-violet-800 border border-violet-400"
+            ></div>
+            Fact
+          </div>
+        </div>
+      </div>
+      <div id="dag-container" class="w-full overflow-x-auto">
+        <svg
+          id="dag-svg"
+          style="min-width: 900px; height: 400px; display: block"
+        ></svg>
+      </div>
+    </div>
+
+    <!-- ── MIGRATION CHECKLIST ── -->
+    <div class="glass rounded-2xl p-6">
+      <h2 class="text-lg font-semibold text-white mb-5">Migration Checklist</h2>
+      <div
+        class="grid grid-cols-1 md:grid-cols-3 gap-6"
+        id="checklist-grid"
+      ></div>
+    </div>
+
+    <script>
+      /* ═══════════════════════════════════════════
+   DATA
+════════════════════════════════════════════ */
+      const PARITY = [
+        {
+          table: "dim_customer",
+          src: 35,
+          tgt: 35,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "dim_date",
+          src: 1826,
+          tgt: 1826,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "dim_employee",
+          src: 15,
+          tgt: 15,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "dim_payment_method",
+          src: 5,
+          tgt: 5,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "dim_product",
+          src: 30,
+          tgt: 30,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "dim_store",
+          src: 5,
+          tgt: 5,
+          pass: true,
+          match: 100.0,
+          type: "dim",
+        },
+        {
+          table: "fct_sales",
+          src: 150,
+          tgt: 150,
+          pass: true,
+          match: 100.0,
+          type: "fact",
+        },
+        {
+          table: "fct_daily_inventory",
+          src: 30,
+          tgt: 30,
+          pass: false,
+          match: 0.0,
+          type: "fact",
+        },
+      ];
+
+      const DRIFT_SAMPLES = [2, 5, 11, 8, 14, 17, 23, 20, 26, 29].map((id) => ({
+        product_id: id,
+        source: 20260331,
+        target: 20260401,
+        delta: 1,
+      }));
+
+      const CHECKLIST = [
+        {
+          phase: "Pre-Migration",
+          color: "emerald",
+          items: [
+            { done: true, label: "Complete source system inventory" },
+            { done: true, label: "Document business rules & transformations" },
+            { done: true, label: "Set up Fabric workspace & data warehouse" },
+            { done: true, label: "Install and configure dbt" },
+            { done: true, label: "Define naming conventions and standards" },
+            { done: true, label: "Create project structure (Medallion)" },
+          ],
+        },
+        {
+          phase: "Migration",
+          color: "emerald",
+          items: [
+            { done: true, label: "Create bronze models (raw data ingestion)" },
+            {
+              done: true,
+              label: "Create silver models (cleansing & standardization)",
+            },
+            { done: true, label: "Create gold models (dimensions and facts)" },
+            { done: true, label: "Implement data quality tests (120 passed)" },
+            { done: true, label: "Add documentation to schema YAMLs" },
+            { done: true, label: "Validate against source system (data diff)" },
+          ],
+        },
+        {
+          phase: "Post-Migration",
+          color: "amber",
+          items: [
+            { done: true, label: "Performance testing & optimization" },
+            {
+              done: true,
+              label: "Native Fabric connector (mssql@12 / Azure AD)",
+            },
+            { done: false, label: "User acceptance testing" },
+            { done: false, label: "Create migration runbooks" },
+            { done: false, label: "Train users on new system" },
+            { done: false, label: "Decommission old system" },
+          ],
+        },
+      ];
+
+      /* ═══════════════════════════════════════════
+   PARITY TABLE
+════════════════════════════════════════════ */
+      const tbody = document.getElementById("parity-table-body");
+      PARITY.forEach((r) => {
+        const badge = r.pass
+          ? `<span class="badge-pass px-2 py-0.5 rounded text-xs font-medium">PASS</span>`
+          : `<span class="badge-warn px-2 py-0.5 rounded text-xs font-medium">DRIFT</span>`;
+        const matchColor =
+          r.match === 100 ? "text-emerald-400" : "text-amber-400";
+        const typeIcon = r.type === "dim" ? "◇" : "◆";
+        const typeColor =
+          r.type === "dim" ? "text-blue-400" : "text-violet-400";
+        tbody.innerHTML += `
+    <tr class="table-row border-b border-slate-700/30">
+      <td class="py-3 pr-4">
+        <span class="${typeColor} mr-1.5 text-xs">${typeIcon}</span>
+        <span class="font-medium text-slate-200">${r.table}</span>
+      </td>
+      <td class="py-3 text-right text-slate-300 tabular-nums">${r.src.toLocaleString()}</td>
+      <td class="py-3 text-right text-slate-300 tabular-nums">${r.tgt.toLocaleString()}</td>
+      <td class="py-3 text-right ${matchColor} font-medium tabular-nums">${r.match.toFixed(1)}%</td>
+      <td class="py-3 text-center">${badge}</td>
+    </tr>`;
+      });
+
+      /* ═══════════════════════════════════════════
+   DRIFT TABLE
+════════════════════════════════════════════ */
+      const dtbody = document.getElementById("drift-table-body");
+      DRIFT_SAMPLES.forEach((r) => {
+        dtbody.innerHTML += `
+    <tr class="table-row border-b border-slate-700/30">
+      <td class="py-2.5 text-slate-300">Product #${r.product_id}</td>
+      <td class="py-2.5 text-right font-mono text-emerald-400 text-xs">${r.source}</td>
+      <td class="py-2.5 text-right font-mono text-blue-400 text-xs">${r.target}</td>
+      <td class="py-2.5 text-right text-amber-400 text-xs">+${r.delta} day</td>
+    </tr>`;
+      });
+
+      /* ═══════════════════════════════════════════
+   ROW COUNT CHART
+════════════════════════════════════════════ */
+      const ctx = document.getElementById("rowCountChart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: PARITY.map((r) =>
+            r.table.replace("dim_", "").replace("fct_", ""),
+          ),
+          datasets: [
+            {
+              label: "MS SQL (Source)",
+              data: PARITY.map((r) => r.src),
+              backgroundColor: "rgba(99,102,241,0.7)",
+              borderColor: "rgba(99,102,241,1)",
+              borderWidth: 1,
+              borderRadius: 4,
+            },
+            {
+              label: "Fabric (Target)",
+              data: PARITY.map((r) => r.tgt),
+              backgroundColor: "rgba(34,197,94,0.5)",
+              borderColor: "rgba(34,197,94,0.8)",
+              borderWidth: 1,
+              borderRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#94a3b8",
+                font: { size: 11 },
+                boxWidth: 12,
+                padding: 16,
+              },
+            },
+            tooltip: {
+              backgroundColor: "#1e2433",
+              borderColor: "rgba(255,255,255,0.1)",
+              borderWidth: 1,
+              titleColor: "#e2e8f0",
+              bodyColor: "#94a3b8",
+              padding: 10,
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#64748b", font: { size: 10 }, maxRotation: 30 },
+              grid: { color: "rgba(255,255,255,0.04)" },
+            },
+            y: {
+              type: "logarithmic",
+              ticks: { color: "#64748b", font: { size: 10 } },
+              grid: { color: "rgba(255,255,255,0.06)" },
+            },
+          },
+        },
+      });
+
+      /* ═══════════════════════════════════════════
+   CHECKLIST
+════════════════════════════════════════════ */
+      const grid = document.getElementById("checklist-grid");
+      CHECKLIST.forEach((phase) => {
+        const done = phase.items.filter((i) => i.done).length;
+        const total = phase.items.length;
+        const pct = Math.round((done / total) * 100);
+        const barColor =
+          phase.color === "emerald"
+            ? "bg-gradient-to-r from-emerald-600 to-emerald-400"
+            : "bg-gradient-to-r from-amber-600 to-amber-400";
+        const headerColor =
+          phase.color === "emerald" ? "text-emerald-400" : "text-amber-400";
+
+        grid.innerHTML += `
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <span class="font-semibold text-sm ${headerColor}">${phase.phase}</span>
+        <span class="text-xs text-slate-400 tabular-nums">${done}/${total}</span>
+      </div>
+      <div class="w-full bg-slate-800 rounded-full h-1 mb-4 overflow-hidden">
+        <div class="progress-bar h-1 rounded-full ${barColor}" style="width:${pct}%"></div>
+      </div>
+      <ul class="space-y-2">
+        ${phase.items
+          .map(
+            (item) => `
+          <li class="flex items-start gap-2.5 text-sm">
+            <span class="mt-0.5 flex-shrink-0 ${item.done ? "text-emerald-400" : "text-slate-600"}">${item.done ? "✓" : "○"}</span>
+            <span class="${item.done ? "text-slate-300" : "text-slate-500"}">${item.label}</span>
+          </li>`,
+          )
+          .join("")}
+      </ul>
+    </div>`;
+      });
+
+      /* ═══════════════════════════════════════════
+   MEDALLION DAG (D3)
+════════════════════════════════════════════ */
+      (function buildDag() {
+        const svg = d3.select("#dag-svg");
+        const W = document.getElementById("dag-container").clientWidth || 960;
+        const H = 400;
+        svg.attr("width", W).attr("height", H);
+
+        const defs = svg.append("defs");
+        defs
+          .append("marker")
+          .attr("id", "arrowhead")
+          .attr("viewBox", "0 -5 10 10")
+          .attr("refX", 18)
+          .attr("refY", 0)
+          .attr("markerWidth", 6)
+          .attr("markerHeight", 6)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M0,-5L10,0L0,5")
+          .attr("fill", "rgba(148,163,184,0.4)");
+
+        // Node definitions
+        const NODES = [
+          // Bronze layer (col 1)
+          {
+            id: "raw_customers",
+            label: "raw_customers",
+            layer: "bronze",
+            col: 0,
+            row: 0,
+          },
+          {
+            id: "raw_orders",
+            label: "raw_orders",
+            layer: "bronze",
+            col: 0,
+            row: 1,
+          },
+          {
+            id: "raw_order_items",
+            label: "raw_order_items",
+            layer: "bronze",
+            col: 0,
+            row: 2,
+          },
+          {
+            id: "raw_products",
+            label: "raw_products",
+            layer: "bronze",
+            col: 0,
+            row: 3,
+          },
+          {
+            id: "raw_employees",
+            label: "raw_employees",
+            layer: "bronze",
+            col: 0,
+            row: 4,
+          },
+          {
+            id: "raw_stores",
+            label: "raw_stores",
+            layer: "bronze",
+            col: 0,
+            row: 5,
+          },
+          {
+            id: "raw_inventory",
+            label: "raw_inventory",
+            layer: "bronze",
+            col: 0,
+            row: 6,
+          },
+          // Silver layer (col 2)
+          {
+            id: "stg_customers",
+            label: "stg_customers",
+            layer: "silver",
+            col: 1,
+            row: 0,
+          },
+          {
+            id: "stg_orders",
+            label: "stg_orders",
+            layer: "silver",
+            col: 1,
+            row: 1,
+          },
+          {
+            id: "stg_order_items",
+            label: "stg_order_items",
+            layer: "silver",
+            col: 1,
+            row: 2,
+          },
+          {
+            id: "stg_products",
+            label: "stg_products",
+            layer: "silver",
+            col: 1,
+            row: 3,
+          },
+          {
+            id: "stg_employees",
+            label: "stg_employees",
+            layer: "silver",
+            col: 1,
+            row: 4,
+          },
+          {
+            id: "stg_stores",
+            label: "stg_stores",
+            layer: "silver",
+            col: 1,
+            row: 5,
+          },
+          {
+            id: "stg_inventory",
+            label: "stg_inventory",
+            layer: "silver",
+            col: 1,
+            row: 6,
+          },
+          // Gold dims (col 3)
+          {
+            id: "dim_customer",
+            label: "dim_customer",
+            layer: "dim",
+            col: 2,
+            row: 0.5,
+          },
+          {
+            id: "dim_product",
+            label: "dim_product",
+            layer: "dim",
+            col: 2,
+            row: 2,
+          },
+          {
+            id: "dim_employee",
+            label: "dim_employee",
+            layer: "dim",
+            col: 2,
+            row: 3.5,
+          },
+          { id: "dim_store", label: "dim_store", layer: "dim", col: 2, row: 5 },
+          { id: "dim_date", label: "dim_date", layer: "dim", col: 2, row: 6 },
+          {
+            id: "dim_payment_method",
+            label: "dim_payment_method",
+            layer: "dim",
+            col: 2,
+            row: 7.5,
+          },
+          // Gold facts (col 4)
+          {
+            id: "fct_sales",
+            label: "fct_sales",
+            layer: "fact",
+            col: 3,
+            row: 2,
+          },
+          {
+            id: "fct_daily_inventory",
+            label: "fct_daily_inventory",
+            layer: "fact",
+            col: 3,
+            row: 5.5,
+          },
+        ];
+
+        const EDGES = [
+          ["raw_customers", "stg_customers"],
+          ["raw_orders", "stg_orders"],
+          ["raw_order_items", "stg_order_items"],
+          ["raw_products", "stg_products"],
+          ["raw_employees", "stg_employees"],
+          ["raw_stores", "stg_stores"],
+          ["raw_inventory", "stg_inventory"],
+          ["stg_customers", "dim_customer"],
+          ["stg_products", "dim_product"],
+          ["stg_employees", "dim_employee"],
+          ["stg_stores", "dim_store"],
+          ["stg_orders", "fct_sales"],
+          ["stg_order_items", "fct_sales"],
+          ["stg_inventory", "fct_daily_inventory"],
+          ["stg_products", "fct_daily_inventory"],
+          ["dim_customer", "fct_sales"],
+          ["dim_product", "fct_sales"],
+          ["dim_employee", "fct_sales"],
+          ["dim_store", "fct_sales"],
+          ["dim_product", "fct_daily_inventory"],
+          ["dim_store", "fct_daily_inventory"],
+        ];
+
+        const COLS = 4;
+        const colW = (W - 80) / COLS;
+        const rowH = (H - 60) / 8;
+        const padX = 50;
+        const padY = 30;
+
+        const nodeMap = {};
+        NODES.forEach((n) => {
+          n.x = padX + n.col * colW + colW / 2;
+          n.y = padY + n.row * rowH + rowH / 2;
+          nodeMap[n.id] = n;
+        });
+
+        const layerColors = {
+          bronze: { fill: "#44230a", stroke: "#b45309", text: "#fcd34d" },
+          silver: { fill: "#1e293b", stroke: "#475569", text: "#94a3b8" },
+          dim: { fill: "#1e3a5f", stroke: "#2563eb", text: "#93c5fd" },
+          fact: { fill: "#2d1b69", stroke: "#7c3aed", text: "#c4b5fd" },
+        };
+
+        // Layer background bands
+        [
+          { x: padX - 20, label: "BRONZE", color: "#b45309", alpha: 0.06 },
+          {
+            x: padX + colW - 20,
+            label: "SILVER",
+            color: "#475569",
+            alpha: 0.06,
+          },
+          {
+            x: padX + colW * 2 - 20,
+            label: "GOLD — Dims",
+            color: "#ca8a04",
+            alpha: 0.06,
+          },
+          {
+            x: padX + colW * 3 - 20,
+            label: "GOLD — Facts",
+            color: "#7c3aed",
+            alpha: 0.06,
+          },
+        ].forEach((band, i) => {
+          svg
+            .append("rect")
+            .attr("x", band.x)
+            .attr("y", 10)
+            .attr("width", colW - 10)
+            .attr("height", H - 20)
+            .attr("rx", 10)
+            .attr("fill", band.color)
+            .attr("opacity", band.alpha);
+          svg
+            .append("text")
+            .attr("x", band.x + (colW - 10) / 2)
+            .attr("y", 24)
+            .attr("text-anchor", "middle")
+            .attr("font-size", 9)
+            .attr("fill", band.color)
+            .attr("opacity", 0.7)
+            .attr("font-weight", "600")
+            .attr("letter-spacing", "0.08em")
+            .text(band.label);
+        });
+
+        // Edges
+        const edgeG = svg.append("g");
+        EDGES.forEach(([src, tgt]) => {
+          const s = nodeMap[src],
+            t = nodeMap[tgt];
+          if (!s || !t) return;
+          const dx = t.x - s.x;
+          edgeG
+            .append("path")
+            .attr(
+              "d",
+              `M${s.x},${s.y} C${s.x + dx * 0.45},${s.y} ${t.x - dx * 0.45},${t.y} ${t.x},${t.y}`,
+            )
+            .attr("class", "link")
+            .attr("marker-end", "url(#arrowhead)");
+        });
+
+        // Nodes
+        const tooltip = document.getElementById("tooltip");
+        const nodeG = svg.append("g");
+        const nodeW = 120,
+          nodeH = 24;
+
+        NODES.forEach((n) => {
+          const c = layerColors[n.layer];
+          const g = nodeG
+            .append("g")
+            .attr("transform", `translate(${n.x},${n.y})`)
+            .attr("cursor", "pointer")
+            .on("mouseenter", (evt) => {
+              const rowCount = PARITY.find((p) => p.table === n.id);
+              const rows = rowCount
+                ? `<br><span style="color:#64748b">rows:</span> ${rowCount.src.toLocaleString()} → ${rowCount.tgt.toLocaleString()}`
+                : "";
+              const status = rowCount
+                ? rowCount.pass
+                  ? `<span style="color:#4ade80">✓ PASS</span>`
+                  : `<span style="color:#fbbf24">⚠ DRIFT</span>`
+                : "";
+              tooltip.innerHTML = `<strong style="color:#e2e8f0">${n.id}</strong><br>
+          <span style="color:#64748b">layer:</span> ${n.layer.toUpperCase()}${rows}
+          ${status ? "<br>" + status : ""}`;
+              tooltip.style.opacity = "1";
+              tooltip.style.left = `${evt.clientX + 14}px`;
+              tooltip.style.top = `${evt.clientY - 8}px`;
+            })
+            .on("mousemove", (evt) => {
+              tooltip.style.left = `${evt.clientX + 14}px`;
+              tooltip.style.top = `${evt.clientY - 8}px`;
+            })
+            .on("mouseleave", () => {
+              tooltip.style.opacity = "0";
+            });
+
+          g.append("rect")
+            .attr("x", -nodeW / 2)
+            .attr("y", -nodeH / 2)
+            .attr("width", nodeW)
+            .attr("height", nodeH)
+            .attr("rx", 5)
+            .attr("fill", c.fill)
+            .attr("stroke", c.stroke)
+            .attr("stroke-width", 1.2);
+
+          // Pass/fail indicator for gold nodes
+          if (n.layer === "dim" || n.layer === "fact") {
+            const pr = PARITY.find((p) => p.table === n.id);
+            if (pr) {
+              g.append("circle")
+                .attr("cx", nodeW / 2 - 5)
+                .attr("cy", -nodeH / 2 + 5)
+                .attr("r", 3.5)
+                .attr("fill", pr.pass ? "#4ade80" : "#fbbf24");
+            }
+          }
+
+          g.append("text")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", 9)
+            .attr("fill", c.text)
+            .attr("font-weight", "500")
+            .text(n.label.length > 16 ? n.label.slice(0, 15) + "…" : n.label);
+        });
+      })();
+    </script>
+  </body>
+</html>

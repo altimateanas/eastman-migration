@@ -1,0 +1,289 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw source tables loaded into the Microsoft Fabric warehouse raw schema.
+      These tables are the Bronze layer input for all downstream transformations.
+      Table names are prefixed with seed_raw_ reflecting the Fabric load convention.
+    schema: raw
+    tables:
+      - name: seed_raw_customers
+        description: Raw customer master data from the source system.
+        columns:
+          - name: CustomerID
+            description: Primary key — unique identifier for each customer.
+            tests:
+              - unique
+              - not_null
+          - name: FirstName
+            description: Customer's first name.
+          - name: LastName
+            description: Customer's last name.
+          - name: Email
+            description: Customer's email address.
+          - name: Phone
+            description: Customer's phone number.
+          - name: DateOfBirth
+            description: Customer's date of birth.
+          - name: Gender
+            description: Customer's gender.
+          - name: Address
+            description: Customer's street address.
+          - name: City
+            description: City of residence.
+          - name: State
+            description: State of residence.
+          - name: Country
+            description: Country of residence.
+          - name: PostalCode
+            description: Postal/ZIP code.
+          - name: CustomerSegment
+            description: Customer segment classification from source system.
+          - name: RegistrationDate
+            description: Date the customer registered.
+          - name: IsActive
+            description: Flag indicating whether the customer account is active.
+
+      - name: seed_raw_orders
+        description: Raw orders header data.
+        columns:
+          - name: OrderID
+            description: Primary key — unique identifier for each order.
+            tests:
+              - unique
+              - not_null
+          - name: CustomerID
+            description: Foreign key to seed_raw_customers.
+            tests:
+              - not_null
+          - name: StoreID
+            description: Foreign key to seed_raw_stores.
+          - name: EmployeeID
+            description: Foreign key to seed_raw_employees.
+          - name: OrderDate
+            description: Date and time the order was placed.
+          - name: RequiredDate
+            description: Date the order is required by.
+          - name: OrderStatus
+            description: Current status of the order.
+          - name: OrderChannel
+            description: Channel through which the order was placed (e.g. Online, In-Store).
+          - name: Notes
+            description: Free-text notes on the order.
+
+      - name: seed_raw_order_items
+        description: Raw order line items — one row per product per order.
+        columns:
+          - name: OrderItemID
+            description: Primary key — unique identifier for each order line item.
+            tests:
+              - unique
+              - not_null
+          - name: OrderID
+            description: Foreign key to seed_raw_orders.
+            tests:
+              - not_null
+          - name: ProductID
+            description: Foreign key to seed_raw_products.
+          - name: Quantity
+            description: Number of units ordered.
+          - name: UnitPrice
+            description: Selling price per unit at time of order.
+          - name: Discount
+            description: Discount percentage applied to this line item.
+          - name: LineTotal
+            description: Total revenue for this line item after discount.
+
+      - name: seed_raw_products
+        description: Raw product master data.
+        columns:
+          - name: ProductID
+            description: Primary key — unique identifier for each product.
+            tests:
+              - unique
+              - not_null
+          - name: ProductName
+            description: Display name of the product.
+          - name: CategoryID
+            description: Foreign key to seed_raw_categories.
+          - name: SupplierID
+            description: Foreign key to seed_raw_suppliers.
+          - name: SKU
+            description: Stock Keeping Unit identifier.
+          - name: UnitPrice
+            description: Current selling price per unit.
+          - name: CostPrice
+            description: Cost of goods per unit.
+          - name: UnitsInStock
+            description: Current stock quantity.
+          - name: ReorderLevel
+            description: Minimum stock level that triggers a reorder.
+          - name: IsDiscontinued
+            description: Flag indicating if the product has been discontinued.
+
+      - name: seed_raw_categories
+        description: Product category master data.
+        columns:
+          - name: CategoryID
+            description: Primary key — unique identifier for each category.
+            tests:
+              - unique
+              - not_null
+          - name: CategoryName
+            description: Name of the product category.
+          - name: Description
+            description: Description of the product category.
+          - name: IsActive
+            description: Flag indicating whether the category is active.
+
+      - name: seed_raw_suppliers
+        description: Supplier master data.
+        columns:
+          - name: SupplierID
+            description: Primary key — unique identifier for each supplier.
+            tests:
+              - unique
+              - not_null
+          - name: SupplierName
+            description: Name of the supplier company.
+          - name: ContactName
+            description: Primary contact name at the supplier.
+          - name: ContactEmail
+            description: Primary contact email at the supplier.
+          - name: Phone
+            description: Supplier phone number.
+          - name: Address
+            description: Supplier street address.
+          - name: City
+            description: Supplier city.
+          - name: State
+            description: Supplier state.
+          - name: Country
+            description: Supplier country.
+          - name: PostalCode
+            description: Supplier postal/ZIP code.
+          - name: IsActive
+            description: Flag indicating whether the supplier is active.
+
+      - name: seed_raw_stores
+        description: Raw store master data.
+        columns:
+          - name: StoreID
+            description: Primary key — unique identifier for each store.
+            tests:
+              - unique
+              - not_null
+          - name: StoreName
+            description: Display name of the store.
+          - name: StoreType
+            description: Type of store (e.g. Flagship, Outlet, Online).
+          - name: Address
+            description: Store street address.
+          - name: City
+            description: City where the store is located.
+          - name: State
+            description: State where the store is located.
+          - name: Country
+            description: Country where the store is located.
+          - name: PostalCode
+            description: Postal/ZIP code of the store.
+          - name: Phone
+            description: Store phone number.
+          - name: ManagerName
+            description: Full name of the store manager.
+          - name: OpenDate
+            description: Date the store opened.
+          - name: IsActive
+            description: Flag indicating whether the store is currently active.
+
+      - name: seed_raw_employees
+        description: Raw employee master data.
+        columns:
+          - name: EmployeeID
+            description: Primary key — unique identifier for each employee.
+            tests:
+              - unique
+              - not_null
+          - name: FirstName
+            description: Employee's first name.
+          - name: LastName
+            description: Employee's last name.
+          - name: Email
+            description: Employee's email address.
+          - name: Phone
+            description: Employee's phone number.
+          - name: HireDate
+            description: Date the employee was hired.
+          - name: JobTitle
+            description: Employee's job title.
+          - name: Department
+            description: Department the employee belongs to.
+          - name: StoreID
+            description: Foreign key to seed_raw_stores.
+          - name: ManagerID
+            description: Foreign key to the employee's manager (self-referencing).
+          - name: Salary
+            description: Employee's salary.
+          - name: IsActive
+            description: Flag indicating whether the employee is currently active.
+
+      - name: seed_raw_payments
+        description: Raw payment transactions data.
+        columns:
+          - name: PaymentID
+            description: Primary key — unique identifier for each payment.
+            tests:
+              - unique
+              - not_null
+          - name: OrderID
+            description: Foreign key to seed_raw_orders.
+            tests:
+              - not_null
+          - name: PaymentDate
+            description: Date and time the payment was made.
+          - name: PaymentMethod
+            description: Method used for payment (e.g. CreditCard, Cash, DigitalWallet).
+          - name: Amount
+            description: Payment amount.
+          - name: Currency
+            description: Currency code for the payment.
+          - name: PaymentStatus
+            description: Status of the payment transaction.
+          - name: TransactionRef
+            description: External transaction reference identifier.
+
+      - name: seed_raw_shipments
+        description: Raw shipment data linked to orders.
+        columns:
+          - name: ShipmentID
+            description: Primary key — unique identifier for each shipment.
+            tests:
+              - unique
+              - not_null
+          - name: OrderID
+            description: Foreign key to seed_raw_orders.
+            tests:
+              - not_null
+          - name: ShipDate
+            description: Date and time the shipment was dispatched.
+          - name: DeliveryDate
+            description: Date and time the shipment was delivered.
+          - name: Carrier
+            description: Carrier / shipping provider name.
+          - name: TrackingNumber
+            description: Shipment tracking number.
+          - name: ShipmentStatus
+            description: Current status of the shipment.
+          - name: ShippingCost
+            description: Cost of shipping for this shipment.
+          - name: Address
+            description: Delivery street address.
+          - name: City
+            description: Delivery city.
+          - name: State
+            description: Delivery state.
+          - name: Country
+            description: Delivery country.
+          - name: PostalCode
+            description: Delivery postal/ZIP code.
