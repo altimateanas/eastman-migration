@@ -1,53 +1,32 @@
 /*
-  Model: stg_customers
-  Layer: Silver
-  Purpose: Cleansed and standardised customer data from raw.seed_raw_customers.
-  Grain: One row per customer.
-  Source: raw.seed_raw_customers
+  Staging: Customers
+  Source: RAW.Customers (seed_raw_customers)
+  Purpose: 1:1 staging of customer master data with type casting
+  Grain: One row per customer
 */
 
-WITH source AS (
-
-    SELECT
-        CustomerID,
-        FirstName,
-        LastName,
-        Email,
-        Phone,
-        DateOfBirth,
-        Gender,
-        Address,
-        City,
-        State,
-        Country,
-        PostalCode,
-        CustomerSegment,
-        RegistrationDate,
-        IsActive
-    FROM {{ source('raw', 'seed_raw_customers') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_customers') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        CustomerID                              AS customer_id,
-        LTRIM(RTRIM(FirstName))                 AS first_name,
-        LTRIM(RTRIM(LastName))                  AS last_name,
-        LOWER(LTRIM(RTRIM(Email)))              AS email,
-        LTRIM(RTRIM(Phone))                     AS phone,
-        CAST(DateOfBirth AS DATE)               AS date_of_birth,
-        LTRIM(RTRIM(Gender))                    AS gender,
-        LTRIM(RTRIM(Address))                   AS address,
-        LTRIM(RTRIM(City))                      AS city,
-        LTRIM(RTRIM(State))                     AS state,
-        LTRIM(RTRIM(Country))                   AS country,
-        CAST(PostalCode AS VARCHAR(20))         AS postal_code,
-        LTRIM(RTRIM(CustomerSegment))           AS customer_segment,
-        CAST(RegistrationDate AS DATE)          AS registration_date,
-        CAST(IsActive AS INT)                   AS is_active
-    FROM source
-
+staged as (
+    select
+        cast(CustomerID as int)             as CustomerID,
+        cast(FirstName as varchar)          as FirstName,
+        cast(LastName as varchar)           as LastName,
+        cast(Email as varchar)              as Email,
+        cast(Phone as varchar)              as Phone,
+        cast(DateOfBirth as date)           as DateOfBirth,
+        cast(Gender as varchar)             as Gender,
+        cast(Address as varchar)            as Address,
+        cast(City as varchar)               as City,
+        cast(State as varchar)              as State,
+        cast(Country as varchar)            as Country,
+        cast(PostalCode as varchar)         as PostalCode,
+        cast(CustomerSegment as varchar)    as CustomerSegment,
+        cast(RegistrationDate as date)      as RegistrationDate,
+        cast(IsActive as int)               as IsActive
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

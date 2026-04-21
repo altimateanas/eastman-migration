@@ -1,383 +1,302 @@
 version: 2
 
 models:
-  # ============================================================
+  # =============================================================================
   # DIMENSIONS
-  # ============================================================
+  # =============================================================================
+  - name: dim_date
+    description: |
+      Date dimension spanning 2022-01-01 to 2026-12-31.
+      Migrated from: TRANSFORMED.usp_LoadDimDate
+      Includes calendar attributes and fiscal calendar (July 1 fiscal year start).
+      One row per calendar day (1,827 rows expected).
+    columns:
+      - name: DateKey
+        description: "Integer date key in YYYYMMDD format (e.g., 20220101)"
+        tests:
+          - unique
+          - not_null
+      - name: FullDate
+        description: "Full calendar date"
+        tests:
+          - unique
+          - not_null
+      - name: DayOfWeek
+        description: "Day of week number (1=Sunday through 7=Saturday)"
+      - name: DayName
+        description: "Day name (Monday, Tuesday, etc.)"
+      - name: DayOfMonth
+        description: "Day number within the month (1-31)"
+      - name: DayOfYear
+        description: "Day number within the year (1-366)"
+      - name: WeekOfYear
+        description: "Week number within the year"
+      - name: MonthNumber
+        description: "Calendar month number (1-12)"
+      - name: MonthName
+        description: "Month name (January, February, etc.)"
+      - name: Quarter
+        description: "Calendar quarter (1-4)"
+      - name: QuarterName
+        description: "Quarter label (Q1, Q2, Q3, Q4)"
+      - name: Year
+        description: "Calendar year"
+      - name: IsWeekend
+        description: "Weekend flag: 1 for Saturday/Sunday, 0 for weekdays"
+      - name: FiscalMonth
+        description: "Fiscal month (1-12, where July=1)"
+      - name: FiscalQuarter
+        description: "Fiscal quarter (1-4, where Q1=July-Sept)"
+      - name: FiscalYear
+        description: "Fiscal year (e.g., FY2023 = July 2022 - June 2023)"
 
   - name: dim_customer
-    description: >
-      Customer dimension table for analytical reporting.
-      One row per customer. Includes surrogate key, concatenated full name,
-      and age group derived from date of birth.
-      Mirrors TRANSFORMED.DimCustomer from MS SQL Server.
+    description: |
+      Customer dimension with derived FullName and AgeGroup.
+      Migrated from: TRANSFORMED.usp_LoadDimCustomer
+      One row per customer (35 rows expected from seed data).
     columns:
-      - name: customer_key
-        description: Surrogate key — SHA-256 hash of customer_id.
+      - name: CustomerID
+        description: "Natural key from source system"
         tests:
           - unique
           - not_null
-      - name: customer_id
-        description: Natural key from source system.
-        tests:
-          - unique
-          - not_null
-      - name: full_name
-        description: Concatenated first and last name.
+      - name: FullName
+        description: "Concatenated first and last name"
         tests:
           - not_null
-      - name: email
-        description: Customer's email address (lower-cased).
-      - name: phone
-        description: Customer's phone number.
-      - name: date_of_birth
-        description: Customer's date of birth.
-      - name: gender
-        description: Customer's gender.
-      - name: city
-        description: City of residence.
-      - name: state
-        description: State of residence.
-      - name: country
-        description: Country of residence.
-      - name: postal_code
-        description: Postal/ZIP code.
-      - name: customer_segment
-        description: Customer segment classification from source system.
-      - name: age_group
-        description: Derived age group bucket (18-24, 25-34, 35-44, 45-54, 55+).
+      - name: Email
+        description: "Customer email address"
+      - name: Phone
+        description: "Customer phone number"
+      - name: DateOfBirth
+        description: "Customer date of birth"
+      - name: Gender
+        description: "Customer gender"
+      - name: City
+        description: "Customer city"
+      - name: State
+        description: "Customer state/province"
+      - name: Country
+        description: "Customer country"
+      - name: PostalCode
+        description: "Customer postal/zip code"
+      - name: CustomerSegment
+        description: "Customer segment (Regular/Premium/VIP)"
+      - name: AgeGroup
+        description: "Age group bucket (18-24, 25-34, 35-44, 45-54, 55+)"
         tests:
+          - not_null
           - accepted_values:
-              arguments:
-                values: ["18-24", "25-34", "35-44", "45-54", "55+"]
-      - name: registration_date
-        description: Date the customer registered.
-      - name: is_active
-        description: 1 = active customer, 0 = inactive.
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-      - name: dw_updated_at
-        description: Timestamp when this record was last updated in the data warehouse.
-
-  - name: dim_date
-    description: >
-      Date dimension covering calendar dates from 2022-01-01 to 2026-12-31.
-      Supports both standard calendar and fiscal year attributes
-      (fiscal year begins on July 1).
-      Generated via dbt_utils.date_spine — no source table dependency.
-      Mirrors TRANSFORMED.DimDate from MS SQL Server.
-    columns:
-      - name: date_key
-        description: Integer date key in YYYYMMDD format (e.g. 20240101).
-        tests:
-          - unique
-          - not_null
-      - name: full_date
-        description: The actual calendar date.
-        tests:
-          - unique
-          - not_null
-      - name: day_of_week
-        description: Day of week number (1=Sunday, 7=Saturday on SQL Server).
-      - name: day_name
-        description: Full day name (e.g. Monday, Tuesday).
-      - name: day_of_month
-        description: Day number within the month (1–31).
-      - name: day_of_year
-        description: Day number within the year (1–366).
-      - name: week_of_year
-        description: ISO week number within the year.
-      - name: month_number
-        description: Month number (1–12).
-      - name: month_name
-        description: Full month name (e.g. January, February).
-      - name: quarter
-        description: Calendar quarter (1–4).
-      - name: quarter_name
-        description: Quarter label (e.g. Q1, Q2, Q3, Q4).
-      - name: year
-        description: Calendar year (e.g. 2024).
-      - name: is_weekend
-        description: 1 = weekend day (Saturday or Sunday), 0 = weekday.
-      - name: fiscal_month
-        description: Fiscal month number (1–12, where 1 = July).
-      - name: fiscal_quarter
-        description: Fiscal quarter (1–4, where Q1 starts July 1).
-      - name: fiscal_year
-        description: Fiscal year (e.g. FY2025 starts July 2024).
-
-  - name: dim_employee
-    description: >
-      Employee dimension enriched with store name and years of service.
-      One row per employee.
-      Mirrors TRANSFORMED.DimEmployee from MS SQL Server.
-    columns:
-      - name: employee_key
-        description: Surrogate key — SHA-256 hash of employee_id.
-        tests:
-          - unique
-          - not_null
-      - name: employee_id
-        description: Natural key from source system.
-        tests:
-          - unique
-          - not_null
-      - name: full_name
-        description: Concatenated first and last name.
-        tests:
-          - not_null
-      - name: email
-        description: Employee's email address (lower-cased).
-      - name: job_title
-        description: Employee's job title.
-      - name: department
-        description: Department the employee belongs to.
-      - name: store_name
-        description: Name of the store the employee is assigned to.
-      - name: hire_date
-        description: Date the employee was hired.
-      - name: years_of_service
-        description: Number of full years between hire date and today.
-      - name: is_active
-        description: 1 = active employee, 0 = inactive.
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-      - name: dw_updated_at
-        description: Timestamp when this record was last updated in the data warehouse.
-
-  - name: dim_payment_method
-    description: >
-      Distinct payment methods with a higher-level payment category grouping.
-      One row per unique payment method value.
-      Mirrors TRANSFORMED.DimPaymentMethod from MS SQL Server.
-    columns:
-      - name: payment_method_key
-        description: Surrogate key — SHA-256 hash of payment_method.
-        tests:
-          - unique
-          - not_null
-      - name: payment_method
-        description: Payment method name (e.g. CreditCard, Cash, DigitalWallet).
-        tests:
-          - unique
-          - not_null
-      - name: payment_category
-        description: Higher-level category (Card, Physical, Digital, Transfer, Other).
-        tests:
-          - accepted_values:
-              arguments:
-                values: ["Card", "Physical", "Digital", "Transfer", "Other"]
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-      - name: dw_updated_at
-        description: Timestamp when this record was last updated in the data warehouse.
+              values: ["18-24", "25-34", "35-44", "45-54", "55+"]
+      - name: RegistrationDate
+        description: "Date when customer registered"
+      - name: IsActive
+        description: "Whether the customer account is active"
 
   - name: dim_product
-    description: >
-      Product dimension enriched with category name, supplier name, and
-      calculated gross profit margin percentage.
-      One row per product.
-      Mirrors TRANSFORMED.DimProduct from MS SQL Server.
+    description: |
+      Product dimension denormalized with category and supplier names.
+      Migrated from: TRANSFORMED.usp_LoadDimProduct
+      One row per product with matching category and supplier (30 rows expected).
     columns:
-      - name: product_key
-        description: Surrogate key — SHA-256 hash of product_id.
+      - name: ProductID
+        description: "Natural key from source system"
         tests:
           - unique
           - not_null
-      - name: product_id
-        description: Natural key from source system.
-        tests:
-          - unique
-          - not_null
-      - name: product_name
-        description: Display name of the product.
+      - name: ProductName
+        description: "Product name"
         tests:
           - not_null
-      - name: sku
-        description: Stock Keeping Unit identifier.
-      - name: category_name
-        description: Product category name (joined from Categories).
-      - name: supplier_name
-        description: Supplier company name (joined from Suppliers).
-      - name: unit_price
-        description: Current selling price per unit.
-      - name: cost_price
-        description: Cost of goods per unit.
-      - name: profit_margin
-        description: >
-          Gross profit margin as a percentage: ((unit_price - cost_price) / unit_price) * 100.
-          Rounded to 2 decimal places. 0 when unit_price = 0.
-      - name: is_discontinued
-        description: 1 = discontinued product, 0 = active.
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-      - name: dw_updated_at
-        description: Timestamp when this record was last updated in the data warehouse.
+      - name: SKU
+        description: "Stock keeping unit code"
+      - name: CategoryName
+        description: "Product category name (from Categories table)"
+        tests:
+          - not_null
+      - name: SupplierName
+        description: "Supplier company name (from Suppliers table)"
+        tests:
+          - not_null
+      - name: UnitPrice
+        description: "Current selling price"
+      - name: CostPrice
+        description: "Product cost price"
+      - name: ProfitMargin
+        description: "Profit margin percentage: ((UnitPrice - CostPrice) / UnitPrice) * 100"
+      - name: IsDiscontinued
+        description: "Whether the product is discontinued (0/1)"
 
   - name: dim_store
-    description: >
-      Store dimension for analytical reporting.
-      One row per store.
-      Mirrors TRANSFORMED.DimStore from MS SQL Server.
+    description: |
+      Store dimension - direct passthrough from source.
+      Migrated from: TRANSFORMED.usp_LoadDimStore
+      One row per store (5 rows expected).
     columns:
-      - name: store_key
-        description: Surrogate key — SHA-256 hash of store_id.
+      - name: StoreID
+        description: "Natural key from source system"
         tests:
           - unique
           - not_null
-      - name: store_id
-        description: Natural key from source system.
+      - name: StoreName
+        description: "Store name"
+        tests:
+          - not_null
+      - name: StoreType
+        description: "Type of store (Flagship/Standard/Express/Warehouse)"
+      - name: City
+        description: "Store city"
+      - name: State
+        description: "Store state/province"
+      - name: Country
+        description: "Store country"
+      - name: PostalCode
+        description: "Store postal code"
+      - name: ManagerName
+        description: "Name of the store manager"
+      - name: OpenDate
+        description: "Date the store opened"
+      - name: IsActive
+        description: "Whether the store is currently active"
+
+  - name: dim_employee
+    description: |
+      Employee dimension denormalized with store name.
+      Migrated from: TRANSFORMED.usp_LoadDimEmployee
+      One row per employee with valid store assignment.
+    columns:
+      - name: EmployeeID
+        description: "Natural key from source system"
         tests:
           - unique
           - not_null
-      - name: store_name
-        description: Display name of the store.
+      - name: FullName
+        description: "Concatenated first and last name"
         tests:
           - not_null
-      - name: store_type
-        description: Type of store (e.g. Flagship, Outlet, Online).
-      - name: city
-        description: City where the store is located.
-      - name: state
-        description: State where the store is located.
-      - name: country
-        description: Country where the store is located.
-      - name: postal_code
-        description: Postal/ZIP code of the store.
-      - name: manager_name
-        description: Full name of the store manager.
-      - name: open_date
-        description: Date the store opened.
-      - name: is_active
-        description: 1 = active store, 0 = inactive.
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-      - name: dw_updated_at
-        description: Timestamp when this record was last updated in the data warehouse.
+      - name: Email
+        description: "Employee email address"
+      - name: JobTitle
+        description: "Employee job title"
+      - name: Department
+        description: "Department the employee belongs to"
+      - name: StoreName
+        description: "Name of the store where employee works (from Stores table)"
+        tests:
+          - not_null
+      - name: HireDate
+        description: "Date the employee was hired"
+      - name: YearsOfService
+        description: "Approximate years of service (DATEDIFF year from HireDate to current date)"
+      - name: IsActive
+        description: "Whether the employee is currently active"
 
-  # ============================================================
-  # FACTS
-  # ============================================================
-
-  - name: fct_sales
-    description: >
-      Sales fact table at order-line-item grain. Joins order items to all
-      six dimensions and allocates shipping cost and payment amount
-      proportionally across line items by their share of the order total.
-      Mirrors TRANSFORMED.FactSales from MS SQL Server.
+  - name: dim_payment_method
+    description: |
+      Payment method reference dimension.
+      Migrated from: TRANSFORMED.usp_LoadDimPaymentMethod
+      One row per unique payment method (derived from payment transactions).
     columns:
-      - name: order_id
-        description: Natural key of the parent order.
+      - name: PaymentMethod
+        description: "Payment method name (CreditCard, DebitCard, Cash, etc.)"
+        tests:
+          - unique
+          - not_null
+      - name: PaymentCategory
+        description: "Payment category grouping (Card, Physical, Digital, Transfer, Other)"
         tests:
           - not_null
-      - name: order_item_id
-        description: Natural key of the order line item. Composite PK with order_id.
-        tests:
-          - not_null
-      - name: order_date_key
-        description: Date key (YYYYMMDD integer) — FK to dim_date.date_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: date_key
-      - name: customer_key
-        description: Surrogate key — FK to dim_customer.customer_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_customer')
-                field: customer_key
-      - name: product_key
-        description: Surrogate key — FK to dim_product.product_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_product')
-                field: product_key
-      - name: store_key
-        description: Surrogate key — FK to dim_store.store_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_store')
-                field: store_key
-      - name: employee_key
-        description: Surrogate key — FK to dim_employee.employee_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_employee')
-                field: employee_key
-      - name: payment_method_key
-        description: Surrogate key — FK to dim_payment_method.payment_method_key. NULL if no payment recorded.
-      - name: order_channel
-        description: Channel through which the order was placed.
-      - name: order_status
-        description: Current status of the order.
-      - name: quantity
-        description: Number of units ordered on this line item.
-      - name: unit_price
-        description: Selling price per unit at time of order.
-      - name: cost_price
-        description: Cost of goods per unit from the product master.
-      - name: discount_percent
-        description: Discount percentage applied to this line item.
-      - name: line_total
-        description: Total revenue for this line item after discount.
-      - name: line_cost
-        description: Total cost for this line item (quantity × cost_price).
-      - name: line_profit
-        description: Gross profit for this line item (line_total − line_cost).
-      - name: shipping_cost
-        description: >
-          Shipping cost allocated to this line item proportional to its
-          share of the total order revenue.
-      - name: payment_amount
-        description: >
-          Payment amount allocated to this line item proportional to its
-          share of the total order revenue.
-      - name: dw_created_at
-        description: Timestamp when this record was loaded to the data warehouse.
-
-  - name: fct_daily_inventory
-    description: >
-      Daily inventory snapshot for all active (non-discontinued) products.
-      One row per product per snapshot date.
-      Snapshot date is derived from GETDATE() at time of dbt run.
-      Run daily to accumulate historical inventory snapshots.
-      Mirrors TRANSFORMED.FactDailyInventory from MS SQL Server.
-    columns:
-      - name: snapshot_date_key
-        description: Date key (YYYYMMDD integer) for the snapshot date — FK to dim_date.date_key.
-        tests:
-          - not_null
-      - name: product_key
-        description: Surrogate key — FK to dim_product.product_key.
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_product')
-                field: product_key
-      - name: units_in_stock
-        description: Current stock quantity at time of snapshot.
-      - name: reorder_level
-        description: Minimum stock level that triggers a reorder.
-      - name: stock_status
-        description: >
-          Inventory status: 'Out of Stock' (0 units), 'Low Stock' (≤ reorder level),
-          or 'In Stock'.
-        tests:
           - accepted_values:
-              arguments:
-                values: ["Out of Stock", "Low Stock", "In Stock"]
-      - name: stock_value
-        description: Total inventory value at cost (units_in_stock × cost_price).
-      - name: dw_created_at
-        description: Timestamp when this snapshot record was loaded to the data warehouse.
+              values: ["Card", "Physical", "Digital", "Transfer", "Other"]
+
+  # =============================================================================
+  # FACTS
+  # =============================================================================
+  - name: fact_sales
+    description: |
+      Central sales fact table at order line item grain.
+      Migrated from: TRANSFORMED.usp_LoadFactSales
+      One row per order line item (150 rows expected from seed data).
+      Includes surrogate key lookups, cost/profit calculations, and proportional allocation.
+    columns:
+      - name: OrderID
+        description: "Natural key of the parent order"
+        tests:
+          - not_null
+      - name: OrderItemID
+        description: "Natural key of the order line item (grain of fact table)"
+        tests:
+          - unique
+          - not_null
+      - name: OrderDateKey
+        description: "Integer date key (YYYYMMDD) linking to dim_date"
+        tests:
+          - not_null
+      - name: CustomerKey
+        description: "Customer dimension key"
+        tests:
+          - not_null
+      - name: ProductKey
+        description: "Product dimension key"
+        tests:
+          - not_null
+      - name: StoreKey
+        description: "Store dimension key"
+        tests:
+          - not_null
+      - name: EmployeeKey
+        description: "Employee dimension key"
+        tests:
+          - not_null
+      - name: PaymentMethodKey
+        description: "Payment method dimension key (may be NULL if no payment)"
+      - name: OrderChannel
+        description: "Sales channel (Online/InStore)"
+      - name: OrderStatus
+        description: "Current order status"
+      - name: Quantity
+        description: "Quantity ordered on this line"
+      - name: UnitPrice
+        description: "Unit selling price"
+      - name: CostPrice
+        description: "Unit cost price (from Products)"
+      - name: DiscountPercent
+        description: "Discount percentage applied to this line"
+      - name: LineTotal
+        description: "Total line amount after discount"
+      - name: LineCost
+        description: "Total cost for this line (Quantity * CostPrice)"
+      - name: LineProfit
+        description: "Line profit (LineTotal - LineCost)"
+      - name: ShippingCost
+        description: "Proportionally allocated shipping cost"
+      - name: PaymentAmount
+        description: "Proportionally allocated payment amount"
+
+  - name: fact_daily_inventory
+    description: |
+      Daily inventory snapshot for active products.
+      Migrated from: TRANSFORMED.usp_LoadFactDailyInventory
+      One row per active (non-discontinued) product per snapshot day.
+    columns:
+      - name: SnapshotDateKey
+        description: "Integer date key (YYYYMMDD) for the snapshot date"
+        tests:
+          - not_null
+      - name: ProductKey
+        description: "Product dimension key"
+        tests:
+          - not_null
+      - name: UnitsInStock
+        description: "Current units in stock"
+      - name: ReorderLevel
+        description: "Minimum stock level before reorder"
+      - name: StockStatus
+        description: "Stock health classification (Out of Stock / Low Stock / In Stock)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Out of Stock", "Low Stock", "In Stock"]
+      - name: StockValue
+        description: "Inventory value at cost (UnitsInStock * CostPrice)"

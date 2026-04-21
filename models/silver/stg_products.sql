@@ -1,43 +1,27 @@
 /*
-  Model: stg_products
-  Layer: Silver
-  Purpose: Cleansed product master data from raw.seed_raw_products.
-  Grain: One row per product.
-  Source: raw.seed_raw_products
+  Staging: Products
+  Source: RAW.Products (seed_raw_products)
+  Purpose: 1:1 staging of product master data with type casting
+  Grain: One row per product
 */
 
-WITH source AS (
-
-    SELECT
-        ProductID,
-        ProductName,
-        CategoryID,
-        SupplierID,
-        SKU,
-        UnitPrice,
-        CostPrice,
-        UnitsInStock,
-        ReorderLevel,
-        IsDiscontinued
-    FROM {{ source('raw', 'seed_raw_products') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_products') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        ProductID                               AS product_id,
-        LTRIM(RTRIM(ProductName))               AS product_name,
-        CategoryID                              AS category_id,
-        SupplierID                              AS supplier_id,
-        LTRIM(RTRIM(SKU))                       AS sku,
-        CAST(UnitPrice AS DECIMAL(18, 4))       AS unit_price,
-        CAST(CostPrice AS DECIMAL(18, 4))       AS cost_price,
-        CAST(UnitsInStock AS INT)               AS units_in_stock,
-        CAST(ReorderLevel AS INT)               AS reorder_level,
-        CAST(IsDiscontinued AS INT)             AS is_discontinued
-    FROM source
-
+staged as (
+    select
+        cast(ProductID as int)              as ProductID,
+        cast(ProductName as varchar)        as ProductName,
+        cast(CategoryID as int)             as CategoryID,
+        cast(SupplierID as int)             as SupplierID,
+        cast(SKU as varchar)                as SKU,
+        cast(UnitPrice as decimal(18,2))    as UnitPrice,
+        cast(CostPrice as decimal(18,2))    as CostPrice,
+        cast(UnitsInStock as int)           as UnitsInStock,
+        cast(ReorderLevel as int)           as ReorderLevel,
+        cast(IsDiscontinued as int)         as IsDiscontinued
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

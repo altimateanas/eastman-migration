@@ -1,37 +1,40 @@
 /*
-  Model: dim_payment_method
-  Layer: Gold — Dimension
-  Purpose: Distinct payment methods with a payment category grouping.
-  Grain: One row per unique payment method.
-  Source: silver.stg_payments
-  Mirrors: TRANSFORMED.DimPaymentMethod (usp_LoadDimPaymentMethod)
+  Dimension: Payment Method
+  Migrated from: TRANSFORMED.usp_LoadDimPaymentMethod
+  Purpose: Reference dimension of distinct payment methods with category classification
+  Grain: One row per unique payment method
+  Notes:
+    - SELECT DISTINCT from payments to extract unique methods
+    - CASE statement for PaymentCategory grouping
+    - NULL payment methods filtered out
+    - Column names preserved exactly from SQL Server
 */
 
-WITH payments AS (
+{{ config(
+    materialized='table',
+    schema='gold',
+    tags=['gold', 'dimension']
+) }}
 
-    SELECT DISTINCT
-        payment_method
-    FROM {{ ref('stg_payments') }}
-    WHERE payment_method IS NOT NULL
-
+with payments as (
+    select * from {{ ref('stg_payments') }}
 ),
 
-enriched AS (
-
-    SELECT
-        {{ dbt_utils.generate_surrogate_key(['payment_method']) }}   AS payment_method_key,
-        payment_method,
-        CASE
-            WHEN payment_method IN ('CreditCard', 'DebitCard')  THEN 'Card'
-            WHEN payment_method = 'Cash'                        THEN 'Physical'
-            WHEN payment_method = 'DigitalWallet'               THEN 'Digital'
-            WHEN payment_method = 'BankTransfer'                THEN 'Transfer'
-            ELSE 'Other'
-        END                                                          AS payment_category,
-        CAST(GETDATE() AS DATETIME2(6))                              AS dw_created_at,
-        CAST(GETDATE() AS DATETIME2(6))                              AS dw_updated_at
-    FROM payments
-
+distinct_methods as (
+    select distinct
+        PaymentMethod,
+        case
+            when PaymentMethod in ('CreditCard', 'DebitCard') then 'Card'
+            when PaymentMethod = 'Cash'                       then 'Physical'
+            when PaymentMethod = 'DigitalWallet'              then 'Digital'
+            when PaymentMethod = 'BankTransfer'               then 'Transfer'
+            else 'Other'
+        end                                                   as PaymentCategory
+    from payments
+    where PaymentMethod is not null
 )
 
-SELECT * FROM enriched
+select
+    PaymentMethod,
+    PaymentCategory
+from distinct_methods

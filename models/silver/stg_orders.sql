@@ -1,41 +1,26 @@
 /*
-  Model: stg_orders
-  Layer: Silver
-  Purpose: Cleansed and standardised order header data from raw.seed_raw_orders.
-  Grain: One row per order.
-  Source: raw.seed_raw_orders
+  Staging: Orders
+  Source: RAW.Orders (seed_raw_orders)
+  Purpose: 1:1 staging of order header data with type casting
+  Grain: One row per order
 */
 
-WITH source AS (
-
-    SELECT
-        OrderID,
-        CustomerID,
-        StoreID,
-        EmployeeID,
-        OrderDate,
-        RequiredDate,
-        OrderStatus,
-        OrderChannel,
-        Notes
-    FROM {{ source('raw', 'seed_raw_orders') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_orders') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        OrderID                                 AS order_id,
-        CustomerID                              AS customer_id,
-        StoreID                                 AS store_id,
-        EmployeeID                              AS employee_id,
-        CAST(OrderDate AS DATE)                 AS order_date,
-        CAST(RequiredDate AS DATE)              AS required_date,
-        LTRIM(RTRIM(OrderChannel))              AS order_channel,
-        LTRIM(RTRIM(OrderStatus))               AS order_status,
-        LTRIM(RTRIM(Notes))                     AS notes
-    FROM source
-
+staged as (
+    select
+        cast(OrderID as int)            as OrderID,
+        cast(CustomerID as int)         as CustomerID,
+        cast(StoreID as int)            as StoreID,
+        cast(EmployeeID as int)         as EmployeeID,
+        cast(OrderDate as date)         as OrderDate,
+        cast(RequiredDate as date)      as RequiredDate,
+        cast(OrderStatus as varchar)    as OrderStatus,
+        cast(OrderChannel as varchar)   as OrderChannel,
+        cast(Notes as varchar)          as Notes
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

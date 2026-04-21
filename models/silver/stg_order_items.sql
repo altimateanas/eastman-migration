@@ -1,37 +1,24 @@
 /*
-  Model: stg_order_items
-  Layer: Silver
-  Purpose: Cleansed order line item data from raw.seed_raw_order_items.
-  Grain: One row per order line item (OrderItemID).
-  Source: raw.seed_raw_order_items
+  Staging: Order Items
+  Source: RAW.OrderItems (seed_raw_order_items)
+  Purpose: 1:1 staging of order line item data with type casting
+  Grain: One row per order line item
 */
 
-WITH source AS (
-
-    SELECT
-        OrderItemID,
-        OrderID,
-        ProductID,
-        Quantity,
-        UnitPrice,
-        Discount,
-        LineTotal
-    FROM {{ source('raw', 'seed_raw_order_items') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_order_items') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        OrderItemID                             AS order_item_id,
-        OrderID                                 AS order_id,
-        ProductID                               AS product_id,
-        CAST(Quantity AS INT)                   AS quantity,
-        CAST(UnitPrice AS DECIMAL(18, 4))       AS unit_price,
-        CAST(Discount AS DECIMAL(5, 2))         AS discount_percent,
-        CAST(LineTotal AS DECIMAL(18, 4))       AS line_total
-    FROM source
-
+staged as (
+    select
+        cast(OrderItemID as int)            as OrderItemID,
+        cast(OrderID as int)                as OrderID,
+        cast(ProductID as int)              as ProductID,
+        cast(Quantity as int)               as Quantity,
+        cast(UnitPrice as decimal(18,2))    as UnitPrice,
+        cast(Discount as decimal(18,4))     as Discount,
+        cast(LineTotal as decimal(18,2))    as LineTotal
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

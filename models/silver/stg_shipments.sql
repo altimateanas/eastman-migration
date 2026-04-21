@@ -1,49 +1,30 @@
 /*
-  Model: stg_shipments
-  Layer: Silver
-  Purpose: Cleansed shipment data from raw.seed_raw_shipments.
-  Grain: One row per shipment.
-  Source: raw.seed_raw_shipments
+  Staging: Shipments
+  Source: RAW.Shipments (seed_raw_shipments)
+  Purpose: 1:1 staging of shipment tracking data with type casting
+  Grain: One row per shipment
 */
 
-WITH source AS (
-
-    SELECT
-        ShipmentID,
-        OrderID,
-        ShipDate,
-        DeliveryDate,
-        Carrier,
-        TrackingNumber,
-        ShipmentStatus,
-        ShippingCost,
-        Address,
-        City,
-        State,
-        Country,
-        PostalCode
-    FROM {{ source('raw', 'seed_raw_shipments') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_shipments') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        ShipmentID                              AS shipment_id,
-        OrderID                                 AS order_id,
-        CAST(ShipDate AS DATETIME2)             AS ship_date,
-        CAST(DeliveryDate AS DATETIME2)         AS delivery_date,
-        LTRIM(RTRIM(Carrier))                   AS carrier,
-        LTRIM(RTRIM(TrackingNumber))            AS tracking_number,
-        LTRIM(RTRIM(ShipmentStatus))            AS shipment_status,
-        CAST(ShippingCost AS DECIMAL(18, 4))    AS shipping_cost,
-        LTRIM(RTRIM(Address))                   AS address,
-        LTRIM(RTRIM(City))                      AS city,
-        LTRIM(RTRIM(State))                     AS state,
-        LTRIM(RTRIM(Country))                   AS country,
-        CAST(PostalCode AS VARCHAR(20))         AS postal_code
-    FROM source
-
+staged as (
+    select
+        cast(ShipmentID as int)             as ShipmentID,
+        cast(OrderID as int)                as OrderID,
+        cast(ShipDate as date)              as ShipDate,
+        cast(DeliveryDate as date)          as DeliveryDate,
+        cast(Carrier as varchar)            as Carrier,
+        cast(TrackingNumber as varchar)     as TrackingNumber,
+        cast(ShipmentStatus as varchar)     as ShipmentStatus,
+        cast(ShippingCost as decimal(18,2)) as ShippingCost,
+        cast(Address as varchar)            as Address,
+        cast(City as varchar)               as City,
+        cast(State as varchar)              as State,
+        cast(Country as varchar)            as Country,
+        cast(PostalCode as varchar)         as PostalCode
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

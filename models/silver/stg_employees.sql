@@ -1,47 +1,29 @@
 /*
-  Model: stg_employees
-  Layer: Silver
-  Purpose: Cleansed employee master data from raw.seed_raw_employees.
-  Grain: One row per employee.
-  Source: raw.seed_raw_employees
+  Staging: Employees
+  Source: RAW.Employees (seed_raw_employees)
+  Purpose: 1:1 staging of employee master data with type casting
+  Grain: One row per employee
 */
 
-WITH source AS (
-
-    SELECT
-        EmployeeID,
-        FirstName,
-        LastName,
-        Email,
-        Phone,
-        HireDate,
-        JobTitle,
-        Department,
-        StoreID,
-        ManagerID,
-        Salary,
-        IsActive
-    FROM {{ source('raw', 'seed_raw_employees') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_employees') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        EmployeeID                              AS employee_id,
-        LTRIM(RTRIM(FirstName))                 AS first_name,
-        LTRIM(RTRIM(LastName))                  AS last_name,
-        LOWER(LTRIM(RTRIM(Email)))              AS email,
-        LTRIM(RTRIM(Phone))                     AS phone,
-        CAST(HireDate AS DATE)                  AS hire_date,
-        LTRIM(RTRIM(JobTitle))                  AS job_title,
-        LTRIM(RTRIM(Department))                AS department,
-        StoreID                                 AS store_id,
-        ManagerID                               AS manager_id,
-        CAST(Salary AS DECIMAL(18, 2))          AS salary,
-        CAST(IsActive AS INT)                   AS is_active
-    FROM source
-
+staged as (
+    select
+        cast(EmployeeID as int)         as EmployeeID,
+        cast(FirstName as varchar)      as FirstName,
+        cast(LastName as varchar)       as LastName,
+        cast(Email as varchar)          as Email,
+        cast(Phone as varchar)          as Phone,
+        cast(HireDate as date)          as HireDate,
+        cast(JobTitle as varchar)       as JobTitle,
+        cast(Department as varchar)     as Department,
+        cast(StoreID as int)            as StoreID,
+        cast(ManagerID as int)          as ManagerID,
+        cast(Salary as decimal(18,2))   as Salary,
+        cast(IsActive as int)           as IsActive
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

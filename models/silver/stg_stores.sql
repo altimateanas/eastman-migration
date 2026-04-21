@@ -1,47 +1,29 @@
 /*
-  Model: stg_stores
-  Layer: Silver
-  Purpose: Cleansed store master data from raw.seed_raw_stores.
-  Grain: One row per store.
-  Source: raw.seed_raw_stores
+  Staging: Stores
+  Source: RAW.Stores (seed_raw_stores)
+  Purpose: 1:1 staging of store location data with type casting
+  Grain: One row per store
 */
 
-WITH source AS (
-
-    SELECT
-        StoreID,
-        StoreName,
-        StoreType,
-        Address,
-        City,
-        State,
-        Country,
-        PostalCode,
-        Phone,
-        ManagerName,
-        OpenDate,
-        IsActive
-    FROM {{ source('raw', 'seed_raw_stores') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_stores') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        StoreID                                 AS store_id,
-        LTRIM(RTRIM(StoreName))                 AS store_name,
-        LTRIM(RTRIM(StoreType))                 AS store_type,
-        LTRIM(RTRIM(Address))                   AS address,
-        LTRIM(RTRIM(City))                      AS city,
-        LTRIM(RTRIM(State))                     AS state,
-        LTRIM(RTRIM(Country))                   AS country,
-        CAST(PostalCode AS VARCHAR(20))         AS postal_code,
-        LTRIM(RTRIM(Phone))                     AS phone,
-        LTRIM(RTRIM(ManagerName))               AS manager_name,
-        CAST(OpenDate AS DATE)                  AS open_date,
-        CAST(IsActive AS INT)                   AS is_active
-    FROM source
-
+staged as (
+    select
+        cast(StoreID as int)            as StoreID,
+        cast(StoreName as varchar)      as StoreName,
+        cast(StoreType as varchar)      as StoreType,
+        cast(Address as varchar)        as Address,
+        cast(City as varchar)           as City,
+        cast(State as varchar)          as State,
+        cast(Country as varchar)        as Country,
+        cast(PostalCode as varchar)     as PostalCode,
+        cast(Phone as varchar)          as Phone,
+        cast(ManagerName as varchar)    as ManagerName,
+        cast(OpenDate as date)          as OpenDate,
+        cast(IsActive as int)           as IsActive
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

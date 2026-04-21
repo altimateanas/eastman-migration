@@ -1,31 +1,21 @@
 /*
-  Model: stg_categories
-  Layer: Silver
-  Purpose: Cleansed product category lookup from raw.seed_raw_categories.
-  Grain: One row per category.
-  Source: raw.seed_raw_categories
+  Staging: Categories
+  Source: RAW.Categories (seed_raw_categories)
+  Purpose: 1:1 staging of category reference data with type casting
+  Grain: One row per category
 */
 
-WITH source AS (
-
-    SELECT
-        CategoryID,
-        CategoryName,
-        Description,
-        IsActive
-    FROM {{ source('raw', 'seed_raw_categories') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_categories') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        CategoryID                              AS category_id,
-        LTRIM(RTRIM(CategoryName))              AS category_name,
-        LTRIM(RTRIM(Description))              AS description,
-        CAST(IsActive AS INT)                   AS is_active
-    FROM source
-
+staged as (
+    select
+        cast(CategoryID as int)         as CategoryID,
+        cast(CategoryName as varchar)   as CategoryName,
+        cast(Description as varchar)    as Description,
+        cast(IsActive as int)           as IsActive
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

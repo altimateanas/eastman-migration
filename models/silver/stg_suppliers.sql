@@ -1,45 +1,28 @@
 /*
-  Model: stg_suppliers
-  Layer: Silver
-  Purpose: Cleansed supplier master data from raw.seed_raw_suppliers.
-  Grain: One row per supplier.
-  Source: raw.seed_raw_suppliers
+  Staging: Suppliers
+  Source: RAW.Suppliers (seed_raw_suppliers)
+  Purpose: 1:1 staging of supplier/vendor data with type casting
+  Grain: One row per supplier
 */
 
-WITH source AS (
-
-    SELECT
-        SupplierID,
-        SupplierName,
-        ContactName,
-        ContactEmail,
-        Phone,
-        Address,
-        City,
-        State,
-        Country,
-        PostalCode,
-        IsActive
-    FROM {{ source('raw', 'seed_raw_suppliers') }}
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_suppliers') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        SupplierID                              AS supplier_id,
-        LTRIM(RTRIM(SupplierName))              AS supplier_name,
-        LTRIM(RTRIM(ContactName))               AS contact_name,
-        LOWER(LTRIM(RTRIM(ContactEmail)))       AS contact_email,
-        LTRIM(RTRIM(Phone))                     AS phone,
-        LTRIM(RTRIM(Address))                   AS address,
-        LTRIM(RTRIM(City))                      AS city,
-        LTRIM(RTRIM(State))                     AS state,
-        LTRIM(RTRIM(Country))                   AS country,
-        CAST(PostalCode AS VARCHAR(20))         AS postal_code,
-        CAST(IsActive AS INT)                   AS is_active
-    FROM source
-
+staged as (
+    select
+        cast(SupplierID as int)         as SupplierID,
+        cast(SupplierName as varchar)   as SupplierName,
+        cast(ContactName as varchar)    as ContactName,
+        cast(ContactEmail as varchar)   as ContactEmail,
+        cast(Phone as varchar)          as Phone,
+        cast(Address as varchar)        as Address,
+        cast(City as varchar)           as City,
+        cast(State as varchar)          as State,
+        cast(Country as varchar)        as Country,
+        cast(PostalCode as varchar)     as PostalCode,
+        cast(IsActive as int)           as IsActive
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

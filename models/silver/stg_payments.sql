@@ -1,40 +1,25 @@
 /*
-  Model: stg_payments
-  Layer: Silver
-  Purpose: Cleansed payment transaction data from raw.seed_raw_payments.
-  Grain: One row per payment transaction. Rows with NULL PaymentMethod are excluded.
-  Source: raw.seed_raw_payments
+  Staging: Payments
+  Source: RAW.Payments (seed_raw_payments)
+  Purpose: 1:1 staging of payment transaction data with type casting
+  Grain: One row per payment
 */
 
-WITH source AS (
-
-    SELECT
-        PaymentID,
-        OrderID,
-        PaymentDate,
-        PaymentMethod,
-        Amount,
-        Currency,
-        PaymentStatus,
-        TransactionRef
-    FROM {{ source('raw', 'seed_raw_payments') }}
-    WHERE PaymentMethod IS NOT NULL
-
+with source as (
+    select * from {{ source('raw', 'seed_raw_payments') }}
 ),
 
-cleaned AS (
-
-    SELECT
-        PaymentID                               AS payment_id,
-        OrderID                                 AS order_id,
-        CAST(PaymentDate AS DATETIME2)          AS payment_date,
-        LTRIM(RTRIM(PaymentMethod))             AS payment_method,
-        CAST(Amount AS DECIMAL(18, 4))          AS amount,
-        LTRIM(RTRIM(Currency))                  AS currency,
-        LTRIM(RTRIM(PaymentStatus))             AS payment_status,
-        LTRIM(RTRIM(TransactionRef))            AS transaction_ref
-    FROM source
-
+staged as (
+    select
+        cast(PaymentID as int)              as PaymentID,
+        cast(OrderID as int)                as OrderID,
+        cast(PaymentDate as date)           as PaymentDate,
+        cast(PaymentMethod as varchar)      as PaymentMethod,
+        cast(Amount as decimal(18,2))       as Amount,
+        cast(Currency as varchar)           as Currency,
+        cast(PaymentStatus as varchar)      as PaymentStatus,
+        cast(TransactionRef as varchar)     as TransactionRef
+    from source
 )
 
-SELECT * FROM cleaned
+select * from staged

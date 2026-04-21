@@ -1,55 +1,52 @@
 /*
-  Model: dim_employee
-  Layer: Gold — Dimension
-  Purpose: Employee dimension enriched with store name and years of service.
-  Grain: One row per employee.
-  Source: silver.stg_employees, silver.stg_stores
-  Mirrors: TRANSFORMED.DimEmployee (usp_LoadDimEmployee)
+  Dimension: Employee
+  Migrated from: TRANSFORMED.usp_LoadDimEmployee
+  Purpose: Employee dimension denormalized with store name, plus derived FullName and YearsOfService
+  Grain: One row per employee (only those with valid store assignment)
+  Notes:
+    - INNER JOIN to Stores replicated exactly (employees without matching store excluded)
+    - GETDATE() replaced with getdate() (Fabric-compatible)
+    - DATEDIFF(YEAR, HireDate, GETDATE()) for YearsOfService
+    - Column names preserved exactly from SQL Server
 */
 
-WITH employees AS (
+{{ config(
+    materialized='table',
+    schema='gold',
+    tags=['gold', 'dimension']
+) }}
 
-    SELECT
-        employee_id,
-        first_name,
-        last_name,
-        email,
-        job_title,
-        department,
-        store_id,
-        hire_date,
-        is_active
-    FROM {{ ref('stg_employees') }}
-
+with employees as (
+    select * from {{ ref('stg_employees') }}
 ),
 
-stores AS (
-
-    SELECT
-        store_id,
-        store_name
-    FROM {{ ref('stg_stores') }}
-
+stores as (
+    select * from {{ ref('stg_stores') }}
 ),
 
-enriched AS (
-
-    SELECT
-        {{ dbt_utils.generate_surrogate_key(['e.employee_id']) }}    AS employee_key,
-        e.employee_id,
-        CONCAT(e.first_name, ' ', e.last_name)                      AS full_name,
-        e.email,
-        e.job_title,
-        e.department,
-        s.store_name,
-        e.hire_date,
-        DATEDIFF(year, e.hire_date, GETDATE())                       AS years_of_service,
-        e.is_active,
-        CAST(GETDATE() AS DATETIME2(6))                              AS dw_created_at,
-        CAST(GETDATE() AS DATETIME2(6))                              AS dw_updated_at
-    FROM employees e
-    INNER JOIN stores s ON e.store_id = s.store_id
-
+transformed as (
+    select
+        e.EmployeeID,
+        concat(e.FirstName, ' ', e.LastName)                as FullName,
+        e.Email,
+        e.JobTitle,
+        e.Department,
+        s.StoreName,
+        e.HireDate,
+        datediff(year, e.HireDate, getdate())               as YearsOfService,
+        e.IsActive
+    from employees e
+    inner join stores s on e.StoreID = s.StoreID
 )
 
-SELECT * FROM enriched
+select
+    EmployeeID,
+    FullName,
+    Email,
+    JobTitle,
+    Department,
+    StoreName,
+    HireDate,
+    YearsOfService,
+    IsActive
+from transformed
